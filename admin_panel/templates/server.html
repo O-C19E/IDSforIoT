@@ -1,0 +1,137 @@
+<!doctype html>
+<html>
+    <head>
+        <title>IDS Dashboard</title>
+        <style>
+            body {
+                background-color: #121212;
+                color: #ffffff;
+                font-family: Arial, sans-serif;
+            }
+
+            h1,
+            h2 {
+                color: #00ffcc;
+            }
+
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-bottom: 30px;
+            }
+
+            th,
+            td {
+                border: 1px solid #333;
+                padding: 8px;
+                text-align: center;
+            }
+
+            th {
+                background-color: #1f1f1f;
+            }
+
+            tr:nth-child(even) {
+                background-color: #1a1a1a;
+            }
+
+            input,
+            select {
+                padding: 6px;
+                margin: 5px;
+                background-color: #1f1f1f;
+                color: white;
+                border: 1px solid #444;
+            }
+
+            button {
+                padding: 6px 12px;
+                background-color: #00ffcc;
+                border: none;
+                cursor: pointer;
+            }
+        </style>
+    </head>
+
+    <body>
+        <h1>IDS Dashboard</h1>
+
+        <!-- 🔍 Search + Filter -->
+        <form method="GET">
+            <input type="text" name="q" placeholder="Search IP / Light ID" />
+
+            <select name="status">
+                <option value="">All Status</option>
+                <option value="SUCCESS">SUCCESS</option>
+                <option value="FAILED">FAILED</option>
+                <option value="PENDING">PENDING</option>
+            </select>
+
+            <select name="action">
+                <option value="">All Actions</option>
+                <option value="ON">ON</option>
+                <option value="OFF">OFF</option>
+                <option value="ACCESS">ACCESS</option>
+            </select>
+
+            <button type="submit">Filter</button>
+        </form>
+
+        <!-- 🟦 Request Logs -->
+        <h2>🟦 Request Logs</h2>
+        <table>
+            <tr>
+                <th>Time</th>
+                <th>IP</th>
+                <th>Light</th>
+                <th>Action</th>
+                <th>Status</th>
+            </tr>
+            {% for r in requests %}
+            <tr>
+                <td>{{ r.timestamp }}</td>
+                <td>{{ r.ip_address }}</td>
+                <td>{{ r.light_id }}</td>
+                <td>{{ r.action }}</td>
+                <td>{{ r.status }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+
+        <!-- 🟥 Alert Logs -->
+        <h2>🟥 Alert Logs</h2>
+        <table>
+            <tr>
+                <th>Time</th>
+                <th>IP</th>
+                <th>Type</th>
+                <th>Severity</th>
+            </tr>
+            {% for a in alerts %}
+            <tr>
+                <td>{{ a.timestamp }}</td>
+                <td>{{ a.ip_address }}</td>
+                <td>{{ a.alert_type }}</td>
+                <td>{{ a.severity }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+
+        <!-- 🟨 System Logs -->
+        <h2>🟨 System Logs</h2>
+        <table>
+            <tr>
+                <th>Time</th>
+                <th>Event</th>
+                <th>Status</th>
+            </tr>
+            {% for s in system_logs %}
+            <tr>
+                <td>{{ s.timestamp }}</td>
+                <td>{{ s.event_type }}</td>
+                <td>{{ s.status }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </body>
+</html>
