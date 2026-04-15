@@ -1,137 +1,187 @@
-<!doctype html>
+<!DOCTYPE html>
 <html>
-    <head>
-        <title>IDS Dashboard</title>
-        <style>
-            body {
-                background-color: #121212;
-                color: #ffffff;
-                font-family: Arial, sans-serif;
-            }
+<head>
+    <title>IDS Dashboard</title>
 
-            h1,
-            h2 {
-                color: #00ffcc;
-            }
+    <style>
+        body {
+            background-color: #121212;
+            color: white;
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
 
-            table {
-                width: 100%;
-                border-collapse: collapse;
-                margin-bottom: 30px;
-            }
+        h1 {
+            color: #00ffcc;
+        }
 
-            th,
-            td {
-                border: 1px solid #333;
-                padding: 8px;
-                text-align: center;
-            }
+        select, button {
+            padding: 6px;
+            margin: 5px;
+            background-color: #1f1f1f;
+            color: white;
+            border: 1px solid #444;
+        }
 
-            th {
-                background-color: #1f1f1f;
-            }
+        button {
+            background-color: #00ffcc;
+            color: black;
+            cursor: pointer;
+        }
 
-            tr:nth-child(even) {
-                background-color: #1a1a1a;
-            }
+        .table-container {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #333;
+            margin-top: 15px;
+        }
 
-            input,
-            select {
-                padding: 6px;
-                margin: 5px;
-                background-color: #1f1f1f;
-                color: white;
-                border: 1px solid #444;
-            }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
 
-            button {
-                padding: 6px 12px;
-                background-color: #00ffcc;
-                border: none;
-                cursor: pointer;
-            }
-        </style>
-    </head>
+        th, td {
+            border: 1px solid #333;
+            padding: 8px;
+            text-align: center;
+        }
 
-    <body>
-        <h1>IDS Dashboard</h1>
+        th {
+            background-color: #1f1f1f;
+        }
 
-        <!-- 🔍 Search + Filter -->
-        <form method="GET">
-            <input type="text" name="q" placeholder="Search IP / Light ID" />
+        tr:nth-child(even) {
+            background-color: #1a1a1a;
+        }
 
-            <select name="status">
-                <option value="">All Status</option>
-                <option value="SUCCESS">SUCCESS</option>
-                <option value="FAILED">FAILED</option>
-                <option value="PENDING">PENDING</option>
-            </select>
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
 
-            <select name="action">
-                <option value="">All Actions</option>
-                <option value="ON">ON</option>
-                <option value="OFF">OFF</option>
-                <option value="ACCESS">ACCESS</option>
-            </select>
+<body>
 
-            <button type="submit">Filter</button>
-        </form>
+<h1>🔍 IDS Dashboard</h1>
 
-        <!-- 🟦 Request Logs -->
-        <h2>🟦 Request Logs</h2>
-        <table>
-            <tr>
-                <th>Time</th>
-                <th>IP</th>
-                <th>Light</th>
-                <th>Action</th>
-                <th>Status</th>
-            </tr>
-            {% for r in requests %}
-            <tr>
-                <td>{{ r.timestamp }}</td>
-                <td>{{ r.ip_address }}</td>
-                <td>{{ r.light_id }}</td>
-                <td>{{ r.action }}</td>
-                <td>{{ r.status }}</td>
-            </tr>
-            {% endfor %}
-        </table>
+<!-- 🔽 Dropdown -->
+<form id="viewForm">
+    <label>Select View:</label>
+    <select id="viewSelect">
+        <option value="request">Request Logs</option>
+        <option value="alert">Alert Logs</option>
+        <option value="system">System Logs</option>
+    </select>
 
-        <!-- 🟥 Alert Logs -->
-        <h2>🟥 Alert Logs</h2>
-        <table>
-            <tr>
-                <th>Time</th>
-                <th>IP</th>
-                <th>Type</th>
-                <th>Severity</th>
-            </tr>
-            {% for a in alerts %}
-            <tr>
-                <td>{{ a.timestamp }}</td>
-                <td>{{ a.ip_address }}</td>
-                <td>{{ a.alert_type }}</td>
-                <td>{{ a.severity }}</td>
-            </tr>
-            {% endfor %}
-        </table>
+    <button type="submit">Show</button>
+</form>
 
-        <!-- 🟨 System Logs -->
-        <h2>🟨 System Logs</h2>
-        <table>
-            <tr>
-                <th>Time</th>
-                <th>Event</th>
-                <th>Status</th>
-            </tr>
-            {% for s in system_logs %}
-            <tr>
-                <td>{{ s.timestamp }}</td>
-                <td>{{ s.event_type }}</td>
-                <td>{{ s.status }}</td>
-            </tr>
-            {% endfor %}
-        </table>
-    </body>
+<!-- 🟦 Request Logs -->
+<div id="requestView" class="table-container">
+    <table>
+        <tr>
+            <th>Time</th>
+            <th>IP</th>
+            <th>Light</th>
+            <th>Action</th>
+            <th>Status</th>
+        </tr>
+        {% for r in requests %}
+        <tr>
+            <td>{{ r.timestamp }}</td>
+            <td>{{ r.ip_address }}</td>
+            <td>{{ r.light_id }}</td>
+            <td>{{ r.action }}</td>
+            <td>{{ r.status }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+
+<!-- 🟥 Alert Logs -->
+<div id="alertView" class="table-container hidden">
+    <table>
+        <tr>
+            <th>Time</th>
+            <th>IP</th>
+            <th>Type</th>
+            <th>Severity</th>
+        </tr>
+        {% for a in alerts %}
+        <tr>
+            <td>{{ a.timestamp }}</td>
+            <td>{{ a.ip_address }}</td>
+            <td>{{ a.alert_type }}</td>
+            <td>{{ a.severity }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+
+<!-- 🟨 System Logs -->
+<div id="systemView" class="table-container hidden">
+    <table>
+        <tr>
+            <th>Time</th>
+            <th>Event</th>
+            <th>Status</th>
+        </tr>
+        {% for s in system_logs %}
+        <tr>
+            <td>{{ s.timestamp }}</td>
+            <td>{{ s.event_type }}</td>
+            <td>{{ s.status }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+
+<!-- ⚡ JS SPA Logic -->
+<script>
+    const form = document.getElementById("viewForm");
+
+    const requestView = document.getElementById("requestView");
+    const alertView = document.getElementById("alertView");
+    const systemView = document.getElementById("systemView");
+
+    const viewSelect = document.getElementById("viewSelect");
+
+    function showView(selected) {
+        // Hide all
+        requestView.classList.add("hidden");
+        alertView.classList.add("hidden");
+        systemView.classList.add("hidden");
+
+        // Show selected
+        if (selected === "request") {
+            requestView.classList.remove("hidden");
+        } else if (selected === "alert") {
+            alertView.classList.remove("hidden");
+        } else if (selected === "system") {
+            systemView.classList.remove("hidden");
+        }
+
+        // 💾 Save selection
+        localStorage.setItem("selectedView", selected);
+    }
+
+    // 🔘 On form submit
+    form.addEventListener("submit", function(e) {
+        e.preventDefault();
+
+        const selected = viewSelect.value;
+        showView(selected);
+    });
+
+    // 🔄 On page load (restore view)
+    window.addEventListener("DOMContentLoaded", function() {
+        const savedView = localStorage.getItem("selectedView") || "request";
+
+        viewSelect.value = savedView;   // set dropdown
+        showView(savedView);            // show correct table
+    });
+</script>
+
+</body>
 </html>

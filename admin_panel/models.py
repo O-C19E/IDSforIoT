@@ -169,3 +169,7 @@ class SystemLog(models.Model):
 
     def __str__(self):
         return f"{self.timestamp} | {self.event_type} | {self.status}"
+
+class SystemState(models.Model):
+    last_hash = models.CharField(max_length=256)
+    updated_at = models.DateTimeField(auto_now=True)
