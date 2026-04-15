@@ -1,187 +1,188 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
-<head>
-    <title>IDS Dashboard</title>
+    <head>
+        <title>IDS Dashboard</title>
 
-    <style>
-        body {
-            background-color: #121212;
-            color: white;
-            font-family: Arial, sans-serif;
-            margin: 20px;
-        }
+        <style>
+            body {
+                background-color: #121212;
+                color: white;
+                font-family: Arial, sans-serif;
+                margin: 20px;
+            }
 
-        h1 {
-            color: #00ffcc;
-        }
+            h1 {
+                color: #00ffcc;
+            }
 
-        select, button {
-            padding: 6px;
-            margin: 5px;
-            background-color: #1f1f1f;
-            color: white;
-            border: 1px solid #444;
-        }
+            select,
+            button {
+                padding: 6px;
+                margin: 5px;
+                background-color: #1f1f1f;
+                color: white;
+                border: 1px solid #444;
+            }
 
-        button {
-            background-color: #00ffcc;
-            color: black;
-            cursor: pointer;
-        }
+            button {
+                background-color: #00ffcc;
+                color: black;
+                cursor: pointer;
+            }
 
-        .table-container {
-            max-height: 400px;
-            overflow-y: auto;
-            border: 1px solid #333;
-            margin-top: 15px;
-        }
+            .table-container {
+                max-height: 400px;
+                overflow-y: auto;
+                border: 1px solid #333;
+                margin-top: 15px;
+            }
 
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
+            table {
+                width: 100%;
+                border-collapse: collapse;
+            }
 
-        th, td {
-            border: 1px solid #333;
-            padding: 8px;
-            text-align: center;
-        }
+            th,
+            td {
+                border: 1px solid #333;
+                padding: 8px;
+                text-align: center;
+            }
 
-        th {
-            background-color: #1f1f1f;
-        }
+            th {
+                background-color: #1f1f1f;
+            }
 
-        tr:nth-child(even) {
-            background-color: #1a1a1a;
-        }
+            tr:nth-child(even) {
+                background-color: #1a1a1a;
+            }
 
-        .hidden {
-            display: none;
-        }
-    </style>
-</head>
+            .hidden {
+                display: none;
+            }
+        </style>
+    </head>
 
-<body>
+    <body>
+        <h1>IDS Dashboard</h1>
 
-<h1>🔍 IDS Dashboard</h1>
+        <!-- 🔽 Dropdown -->
+        <form id="viewForm">
+            <label>Select View:</label>
+            <select id="viewSelect">
+                <option value="request">Request Logs</option>
+                <option value="alert">Alert Logs</option>
+                <option value="system">System Logs</option>
+            </select>
 
-<!-- 🔽 Dropdown -->
-<form id="viewForm">
-    <label>Select View:</label>
-    <select id="viewSelect">
-        <option value="request">Request Logs</option>
-        <option value="alert">Alert Logs</option>
-        <option value="system">System Logs</option>
-    </select>
+            <button type="submit">Show</button>
+        </form>
 
-    <button type="submit">Show</button>
-</form>
+        <!-- 🟦 Request Logs -->
+        <div id="requestView" class="table-container">
+            <table>
+                <tr>
+                    <th>Time</th>
+                    <th>IP</th>
+                    <th>Light</th>
+                    <th>Action</th>
+                    <th>Status</th>
+                </tr>
+                {% for r in requests %}
+                <tr>
+                    <td>{{ r.timestamp }}</td>
+                    <td>{{ r.ip_address }}</td>
+                    <td>{{ r.light_id }}</td>
+                    <td>{{ r.action }}</td>
+                    <td>{{ r.status }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
 
-<!-- 🟦 Request Logs -->
-<div id="requestView" class="table-container">
-    <table>
-        <tr>
-            <th>Time</th>
-            <th>IP</th>
-            <th>Light</th>
-            <th>Action</th>
-            <th>Status</th>
-        </tr>
-        {% for r in requests %}
-        <tr>
-            <td>{{ r.timestamp }}</td>
-            <td>{{ r.ip_address }}</td>
-            <td>{{ r.light_id }}</td>
-            <td>{{ r.action }}</td>
-            <td>{{ r.status }}</td>
-        </tr>
-        {% endfor %}
-    </table>
-</div>
+        <!-- 🟥 Alert Logs -->
+        <div id="alertView" class="table-container hidden">
+            <table>
+                <tr>
+                    <th>Time</th>
+                    <th>IP</th>
+                    <th>Type</th>
+                    <th>Severity</th>
+                </tr>
+                {% for a in alerts %}
+                <tr>
+                    <td>{{ a.timestamp }}</td>
+                    <td>{{ a.ip_address }}</td>
+                    <td>{{ a.alert_type }}</td>
+                    <td>{{ a.severity }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
 
-<!-- 🟥 Alert Logs -->
-<div id="alertView" class="table-container hidden">
-    <table>
-        <tr>
-            <th>Time</th>
-            <th>IP</th>
-            <th>Type</th>
-            <th>Severity</th>
-        </tr>
-        {% for a in alerts %}
-        <tr>
-            <td>{{ a.timestamp }}</td>
-            <td>{{ a.ip_address }}</td>
-            <td>{{ a.alert_type }}</td>
-            <td>{{ a.severity }}</td>
-        </tr>
-        {% endfor %}
-    </table>
-</div>
+        <!-- 🟨 System Logs -->
+        <div id="systemView" class="table-container hidden">
+            <table>
+                <tr>
+                    <th>Time</th>
+                    <th>Event</th>
+                    <th>Status</th>
+                </tr>
+                {% for s in system_logs %}
+                <tr>
+                    <td>{{ s.timestamp }}</td>
+                    <td>{{ s.event_type }}</td>
+                    <td>{{ s.status }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
 
-<!-- 🟨 System Logs -->
-<div id="systemView" class="table-container hidden">
-    <table>
-        <tr>
-            <th>Time</th>
-            <th>Event</th>
-            <th>Status</th>
-        </tr>
-        {% for s in system_logs %}
-        <tr>
-            <td>{{ s.timestamp }}</td>
-            <td>{{ s.event_type }}</td>
-            <td>{{ s.status }}</td>
-        </tr>
-        {% endfor %}
-    </table>
-</div>
+        <!-- ⚡ JS SPA Logic -->
+        <script>
+            const form = document.getElementById("viewForm");
 
-<!-- ⚡ JS SPA Logic -->
-<script>
-    const form = document.getElementById("viewForm");
+            const requestView = document.getElementById("requestView");
+            const alertView = document.getElementById("alertView");
+            const systemView = document.getElementById("systemView");
 
-    const requestView = document.getElementById("requestView");
-    const alertView = document.getElementById("alertView");
-    const systemView = document.getElementById("systemView");
+            const viewSelect = document.getElementById("viewSelect");
 
-    const viewSelect = document.getElementById("viewSelect");
+            function showView(selected) {
+                // Hide all
+                requestView.classList.add("hidden");
+                alertView.classList.add("hidden");
+                systemView.classList.add("hidden");
 
-    function showView(selected) {
-        // Hide all
-        requestView.classList.add("hidden");
-        alertView.classList.add("hidden");
-        systemView.classList.add("hidden");
+                // Show selected
+                if (selected === "request") {
+                    requestView.classList.remove("hidden");
+                } else if (selected === "alert") {
+                    alertView.classList.remove("hidden");
+                } else if (selected === "system") {
+                    systemView.classList.remove("hidden");
+                }
 
-        // Show selected
-        if (selected === "request") {
-            requestView.classList.remove("hidden");
-        } else if (selected === "alert") {
-            alertView.classList.remove("hidden");
-        } else if (selected === "system") {
-            systemView.classList.remove("hidden");
-        }
+                // 💾 Save selection
+                localStorage.setItem("selectedView", selected);
+            }
 
-        // 💾 Save selection
-        localStorage.setItem("selectedView", selected);
-    }
+            // 🔘 On form submit
+            form.addEventListener("submit", function (e) {
+                e.preventDefault();
 
-    // 🔘 On form submit
-    form.addEventListener("submit", function(e) {
-        e.preventDefault();
+                const selected = viewSelect.value;
+                showView(selected);
+            });
 
-        const selected = viewSelect.value;
-        showView(selected);
-    });
+            // 🔄 On page load (restore view)
+            window.addEventListener("DOMContentLoaded", function () {
+                const savedView =
+                    localStorage.getItem("selectedView") || "request";
 
-    // 🔄 On page load (restore view)
-    window.addEventListener("DOMContentLoaded", function() {
-        const savedView = localStorage.getItem("selectedView") || "request";
-
-        viewSelect.value = savedView;   // set dropdown
-        showView(savedView);            // show correct table
-    });
-</script>
-
-</body>
+                viewSelect.value = savedView; // set dropdown
+                showView(savedView); // show correct table
+            });
+        </script>
+    </body>
 </html>

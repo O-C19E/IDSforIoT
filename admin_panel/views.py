@@ -1,14 +1,16 @@
+import hashlib
 import ipaddress
-import requests
+import json
 from datetime import timedelta
-import hashlib, json
-from django.utils import timezone
+
+import requests
 from django.core.exceptions import ObjectDoesNotExist
 from django.shortcuts import render
-
+from django.utils import timezone
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
+from .ml_detector import run_ml_detection
 from .models import AlertLog, Customer, Light, PendingRequest, RequestLog, SystemLog
 
 IOT_URL = "http://10.165.112.138:5000/sync"
@@ -53,15 +55,13 @@ def is_iot_alive():
 # IDS CORE ANALYSIS
 # =========================
 def check_request_rate(ip):
-    from django.utils import timezone
     from datetime import timedelta
+
+    from django.utils import timezone
 
     one_min_ago = timezone.now() - timedelta(minutes=1)
 
-    logs = RequestLog.objects.filter(
-        ip_address=ip,
-        timestamp__gte=one_min_ago
-    )
+    logs = RequestLog.objects.filter(ip_address=ip, timestamp__gte=one_min_ago)
 
     total = logs.count()
 
@@ -73,27 +73,21 @@ def check_request_rate(ip):
 
     # PRIORITY RULES (IMPORTANT)
     if failed_count >= 8:
-        return {
-            "category": "FAILED_ATTEMPT_SPAM",
-            "count": failed_count
-        }
+        return {"category": "FAILED_ATTEMPT_SPAM", "count": failed_count}
 
     if pending_count >= 8:
-        return {
-            "category": "ACCESS_SPAM",
-            "count": pending_count
-        }
+        return {"category": "ACCESS_SPAM", "count": pending_count}
 
     return {"category": "NORMAL"}
+
 
 def should_create_alert(ip, alert_type, window_seconds=60):
     time_threshold = timezone.now() - timedelta(seconds=window_seconds)
 
     return not AlertLog.objects.filter(
-        ip_address=ip,
-        alert_type=alert_type,
-        timestamp__gte=time_threshold
+        ip_address=ip, alert_type=alert_type, timestamp__gte=time_threshold
     ).exists()
+
 
 def generate_system_hash():
     lights = list(Light.objects.all().values())
@@ -101,6 +95,7 @@ def generate_system_hash():
     data_string = json.dumps(lights, sort_keys=True, default=str)
 
     return hashlib.sha256(data_string.encode()).hexdigest()
+
 
 def should_run_integrity_check():
     tracker, _ = SystemIntegrityTracker.objects.get_or_create(id=1)
@@ -112,6 +107,7 @@ def should_run_integrity_check():
 
     return False
 
+
 def check_system_integrity():
     current_hash = generate_system_hash()
 
@@ -121,37 +117,35 @@ def check_system_integrity():
         SystemLog.objects.create(
             event_type="HASH_MISMATCH",
             status="FAILED",
-            message="System tampering detected"
+            message="System tampering detected",
         )
 
         state.last_hash = current_hash
         state.save()
     else:
         SystemLog.objects.create(
-            event_type="HASH_CHECK",
-            status="SUCCESS",
-            message="System OK"
+            event_type="HASH_CHECK", status="SUCCESS", message="System OK"
         )
+
 
 def log_before_after(action, light=None):
     before_hash = generate_system_hash()
 
     SystemLog.objects.create(
-        event_type=f"{action}_BEFORE",
-        status="SUCCESS",
-        message=before_hash
+        event_type=f"{action}_BEFORE", status="SUCCESS", message=before_hash
     )
 
     return before_hash
+
 
 def log_after(action):
     after_hash = generate_system_hash()
 
     SystemLog.objects.create(
-        event_type=f"{action}_AFTER",
-        status="SUCCESS",
-        message=after_hash
+        event_type=f"{action}_AFTER", status="SUCCESS", message=after_hash
     )
+
+
 # =========================
 # IOT HELPERS
 # =========================
@@ -176,18 +170,15 @@ def sync_light_add_update(light):
     try:
         requests.post(IOT_URL, json=payload)
         SystemLog.objects.create(
-            event_type="LIGHT_SYNC",
-            status="SUCCESS",
-            message="Light synced to IoT"
+            event_type="LIGHT_SYNC", status="SUCCESS", message="Light synced to IoT"
         )
     except Exception as e:
         SystemLog.objects.create(
-            event_type="LIGHT_SYNC",
-            status="FAILED",
-            message=str(e)
+            event_type="LIGHT_SYNC", status="FAILED", message=str(e)
         )
 
     log_after("LIGHT_SYNC")
+
 
 def sync_light_delete(light):
     log_before_after("LIGHT_DELETE")
@@ -200,18 +191,15 @@ def sync_light_delete(light):
     try:
         requests.post(IOT_URL, json=payload)
         SystemLog.objects.create(
-            event_type="LIGHT_DELETE",
-            status="SUCCESS",
-            message="Light deleted"
+            event_type="LIGHT_DELETE", status="SUCCESS", message="Light deleted"
         )
     except Exception as e:
         SystemLog.objects.create(
-            event_type="LIGHT_DELETE",
-            status="FAILED",
-            message=str(e)
+            event_type="LIGHT_DELETE", status="FAILED", message=str(e)
         )
 
     log_after("LIGHT_DELETE")
+
 
 def sync_customer_add_update(light, customer_ip):
     from .models import SystemLog
@@ -221,7 +209,7 @@ def sync_customer_add_update(light, customer_ip):
     SystemLog.objects.create(
         event_type="CUSTOMER_SYNC_BEFORE",
         status="SUCCESS",
-        message=f"Before hash: {before_hash}"
+        message=f"Before hash: {before_hash}",
     )
 
     payload = {
@@ -241,20 +229,18 @@ def sync_customer_add_update(light, customer_ip):
         SystemLog.objects.create(
             event_type="CUSTOMER_SYNC_AFTER",
             status="SUCCESS",
-            message=f"After hash: {after_hash}"
+            message=f"After hash: {after_hash}",
         )
 
         SystemLog.objects.create(
             event_type="CUSTOMER_SYNC",
             status="SUCCESS",
-            message=f"Customer synced for {customer_ip}"
+            message=f"Customer synced for {customer_ip}",
         )
 
     except Exception as e:
         SystemLog.objects.create(
-            event_type="CUSTOMER_SYNC",
-            status="FAILED",
-            message=str(e)
+            event_type="CUSTOMER_SYNC", status="FAILED", message=str(e)
         )
 
 
@@ -266,14 +252,12 @@ def sync_customer_delete(light):
     SystemLog.objects.create(
         event_type="CUSTOMER_DELETE_BEFORE",
         status="SUCCESS",
-        message=f"Before hash: {before_hash}"
+        message=f"Before hash: {before_hash}",
     )
 
     payload = {
         "action": "REMOVE_CUSTOMER",
-        "data": {
-            "light_id": light.light_id
-        },
+        "data": {"light_id": light.light_id},
     }
 
     try:
@@ -284,20 +268,18 @@ def sync_customer_delete(light):
         SystemLog.objects.create(
             event_type="CUSTOMER_DELETE_AFTER",
             status="SUCCESS",
-            message=f"After hash: {after_hash}"
+            message=f"After hash: {after_hash}",
         )
 
         SystemLog.objects.create(
             event_type="CUSTOMER_DELETE",
             status="SUCCESS",
-            message=f"Customer removed from light {light.light_id}"
+            message=f"Customer removed from light {light.light_id}",
         )
 
     except Exception as e:
         SystemLog.objects.create(
-            event_type="CUSTOMER_DELETE",
-            status="FAILED",
-            message=str(e)
+            event_type="CUSTOMER_DELETE", status="FAILED", message=str(e)
         )
 
 
@@ -319,24 +301,27 @@ def toggle_light(request):
             status="FAILED",
             message="FAILED_ATTEMPT",
         )
+
+        # ✅ ML Detection
+        run_ml_detection(ip)
+
         return Response({"error": "Missing data"}, status=400)
 
     log = RequestLog.objects.create(
-        ip_address=ip,
-        light_id=light_id,
-        action=action,
-        status="PENDING"
+        ip_address=ip, light_id=light_id, action=action, status="PENDING"
     )
 
     try:
         res = requests.post(
-            IOT_TOGGLE_URL,
-            json={"light_id": light_id, "action": action}
+            IOT_TOGGLE_URL, json={"light_id": light_id, "action": action}
         )
 
         log.status = "SUCCESS" if res.status_code == 200 else "FAILED"
         log.message = "TOGGLE_COMPLETE"
         log.save()
+
+        # ✅ ML Detection
+        run_ml_detection(ip)
 
         return Response(res.json(), status=res.status_code)
 
@@ -344,6 +329,9 @@ def toggle_light(request):
         log.status = "FAILED"
         log.message = "FAILED_ATTEMPT"
         log.save()
+
+        # ✅ ML Detection
+        run_ml_detection(ip)
 
         return Response({"error": str(e)}, status=500)
 
@@ -355,6 +343,7 @@ def toggle_light(request):
 def request_access(request):
     if should_run_integrity_check():
         check_system_integrity()
+
     light_id = request.data.get("light_id")
     customer_name = request.data.get("customer_name", "")
 
@@ -377,8 +366,11 @@ def request_access(request):
                 ip_address=ip,
                 alert_type="FAILED_ATTEMPT_SPAM",
                 severity="HIGH",
-                message="Failed attempt spike detected"
+                message="Failed attempt spike detected",
             )
+
+        # ✅ ML Detection
+        run_ml_detection(ip)
 
         return Response({"error": "light_id is required"}, status=400)
 
@@ -402,18 +394,18 @@ def request_access(request):
                 ip_address=ip,
                 alert_type="FAILED_ATTEMPT_SPAM",
                 severity="HIGH",
-                message="Failed attempt spike detected"
+                message="Failed attempt spike detected",
             )
+
+        # ✅ ML Detection
+        run_ml_detection(ip)
 
         return Response({"error": "Invalid room ID"}, status=400)
 
     # =========================
     # 3. Existing customer
     # =========================
-    existing_customer = Customer.objects.filter(
-        customer_ip=ip,
-        light=light
-    ).first()
+    existing_customer = Customer.objects.filter(customer_ip=ip, light=light).first()
 
     if existing_customer:
         RequestLog.objects.create(
@@ -424,11 +416,16 @@ def request_access(request):
             message="ACCESS_GRANTED",
         )
 
-        return Response({
-            "message": "Access granted",
-            "approved": True,
-            "light_id": light_id,
-        })
+        # ✅ ML Detection
+        run_ml_detection(ip)
+
+        return Response(
+            {
+                "message": "Access granted",
+                "approved": True,
+                "light_id": light_id,
+            }
+        )
 
     # =========================
     # 4. Room occupied
@@ -447,8 +444,11 @@ def request_access(request):
                 ip_address=ip,
                 alert_type="FAILED_ATTEMPT_SPAM",
                 severity="HIGH",
-                message="Failed attempt spike detected"
+                message="Failed attempt spike detected",
             )
+
+        # ✅ ML Detection
+        run_ml_detection(ip)
 
         return Response({"error": "Room already occupied"}, status=400)
 
@@ -456,8 +456,7 @@ def request_access(request):
     # 5. Pending exists
     # =========================
     existing_request = PendingRequest.objects.filter(
-        light=light,
-        customer_ip=ip
+        light=light, customer_ip=ip
     ).first()
 
     if existing_request:
@@ -474,13 +473,15 @@ def request_access(request):
                 ip_address=ip,
                 alert_type="ACCESS_SPAM",
                 severity="MEDIUM",
-                message="Repeated access requests detected"
+                message="Repeated access requests detected",
             )
 
-        return Response({
-            "message": "Request already pending approval",
-            "approved": False
-        })
+        # ✅ ML Detection
+        run_ml_detection(ip)
+
+        return Response(
+            {"message": "Request already pending approval", "approved": False}
+        )
 
     # =========================
     # 6. Create request
@@ -499,10 +500,10 @@ def request_access(request):
         message="PENDING",
     )
 
-    return Response({
-        "message": "Request sent for approval",
-        "approved": False
-    })
+    # ✅ ML Detection
+    run_ml_detection(ip)
+
+    return Response({"message": "Request sent for approval", "approved": False})
 
 
 # =========================
@@ -525,10 +526,7 @@ def toggle_all_lights(request):
 def get_light_status(request, cust_id):
     try:
         customer = Customer.objects.get(id=cust_id)
-        return Response({
-            "customer_id": cust_id,
-            "light_id": customer.light.light_id
-        })
+        return Response({"customer_id": cust_id, "light_id": customer.light.light_id})
     except ObjectDoesNotExist:
         return Response({"error": "Customer not found"}, status=404)
 
@@ -566,4 +564,3 @@ def server_dashboard(request):
             "system_logs": system_logs,
         },
     )
-
